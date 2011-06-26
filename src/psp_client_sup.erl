@@ -1,4 +1,4 @@
--module(pubsubpoll_sup).
+-module(psp_client_sup).
 
 -behaviour(supervisor).
 
@@ -8,8 +8,10 @@
 %% Supervisor callbacks
 -export([init/1]).
 
+-export([start_child/0]).
+
 %% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+-define(CHILD(I, Type), {I, {I, start_link, []}, temporary, 5000, Type, [I]}).
 
 %% ===================================================================
 %% API functions
@@ -23,9 +25,9 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, [
-        ?CHILD(psp_pubsub, worker),
-        ?CHILD(psp_channel_sup, worker),
-        ?CHILD(psp_client_sup, worker)
+    {ok, { {simple_one_for_one, 5, 10}, [
+        ?CHILD(psp_client, worker)
     ]} }.
 
+start_child() ->
+    supervisor:start_child(?MODULE, []).
