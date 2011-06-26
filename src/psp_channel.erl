@@ -7,9 +7,9 @@
 -export([start_link/2, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
--export([filter/1]).
+-export([filter/1, suscribe/2]).
 
--record(state, {filter, timeout}).
+-record(state, {filter, timeout, clients}).
 
 %%====================================================================
 %% api callbacks
@@ -34,7 +34,8 @@ init([Filter, Timeout]) ->
     ok = gen_server:cast(psp_pubsub, {new_channel, self(), Filter}),
     {ok, #state{
         filter = Filter,
-        timeout = Timeout
+        timeout = Timeout,
+        clients = []
     }}.
 
 %%--------------------------------------------------------------------
@@ -59,6 +60,7 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 handle_cast({event, Event}, State) ->
     io:format("Chan ~w got event ~p~n", [self(), Event]),
+    %[TODO] Filtering event and propagate it to clients.
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -95,3 +97,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 filter(Channel) ->
     gen_server:call(Channel, filter).
+
+suscribe(_Channel, _Client) ->
+    ok.
