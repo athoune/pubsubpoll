@@ -53,7 +53,8 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-handle_cast({publish, _Event}, State) ->
+handle_cast({publish, Event}, State) ->
+    ok = broadcast_event(Event, State#state.channels),
     {noreply, State};
 handle_cast({new_channel, Pid, _Filter}, State) ->
     {noreply, State#state{
@@ -91,3 +92,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %% Public API
 %%--------------------------------------------------------------------
+
+%%--------------------------------------------------------------------
+%% Private API
+%%--------------------------------------------------------------------
+
+broadcast_event(_Event, []) ->
+    ok;
+broadcast_event(Event, [Channel|Tail]) ->
+    ok = gen_server:cast(Channel, {event, Event}),
+    broadcast_event(Event, Tail).

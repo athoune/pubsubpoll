@@ -14,7 +14,7 @@ handle_info/2, terminate/2, code_change/3]).
 %%====================================================================
 
 start_link(Filter, Timeout) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Filter, Timeout], []).
+    gen_server:start_link(?MODULE, [Filter, Timeout], []).
 
 %%====================================================================
 %% gen_server callbacks
@@ -28,7 +28,7 @@ start_link(Filter, Timeout) ->
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
 init([Filter, Timeout]) ->
-    error_logger:info_msg("Starting channel", []),
+    error_logger:info_msg("Starting channel~n", []),
     ok = gen_server:cast(psp_pubsub, {new_channel, self(), Filter}),
     {ok, #state{
         filter = Filter,
@@ -53,6 +53,9 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast({event, Event}, State) ->
+    io:format("Chan ~w got event ~p~n", [self(), Event]),
+    {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
