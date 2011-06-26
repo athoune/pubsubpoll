@@ -42,6 +42,8 @@ init([]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
+handle_call(channels, _From, State) ->
+    {reply, {ok, State#state.channels}, State};
 handle_call(_Request, _From, State) ->
     {reply, State}.
 
@@ -51,6 +53,12 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast({publish, _Event}, State) ->
+    {noreply, State};
+handle_cast({new_channel, Pid, _Filter}, State) ->
+    {noreply, State#state{
+        channels = State#state.channels ++ [Pid]
+    }};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 

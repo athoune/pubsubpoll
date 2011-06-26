@@ -4,6 +4,7 @@
 -export([
     create_channel/1,
     create_channel/2,
+    channels/0,
     publish/1
 ]).
 
@@ -15,5 +16,8 @@ create_channel(Filter, TimeOut) ->
         {psp_channel, start_link, [Filter, TimeOut]},
         permanent, 5000, worker, [psp_channel]}).
 
-publish(_Event) ->
-    ok.
+channels()->
+    gen_server:call(psp_pubsub, channels).
+
+publish(Event) ->
+    gen_server:cast(psp_pubsub, {publish, Event}).

@@ -5,4 +5,4 @@
 main(_) ->
     ok = application:start(pubsubpoll),
     {ok, Chan} = pubsubpoll:create_channel({}),
-    io:format("Chan: ~p~n", [Chan]).
+    io:format("Chan: ~p~n~p~n", [Chan, pubsubpoll:channels()]).

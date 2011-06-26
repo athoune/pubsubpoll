@@ -29,6 +29,7 @@ start_link(Filter, Timeout) ->
 %%--------------------------------------------------------------------
 init([Filter, Timeout]) ->
     error_logger:info_msg("Starting channel", []),
+    ok = gen_server:cast(psp_pubsub, {new_channel, self(), Filter}),
     {ok, #state{
         filter = Filter,
         timeout = Timeout
