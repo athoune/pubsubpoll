@@ -8,7 +8,7 @@
 %% Supervisor callbacks
 -export([init/1]).
 
--export([start_child/2]).
+-export([start_child/3]).
 
 %% Helper macro for declaring children of supervisor
 -define(CHILD(I, Type), {I, {I, start_link, []}, temporary, 5000, Type, [I]}).
@@ -29,5 +29,7 @@ init([]) ->
         ?CHILD(psp_channel, worker)
     ]} }.
 
-start_child(Filter, Timeout) ->
-    supervisor:start_child(?MODULE, [Filter, Timeout]).
+start_child(Name, Filter, Timeout) ->
+    {ok, Pid} = supervisor:start_child(?MODULE, [Filter, Timeout]),
+    register(Name, Pid),
+    {ok, Name}.

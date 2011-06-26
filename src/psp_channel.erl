@@ -7,6 +7,8 @@
 -export([start_link/2, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
+-export([filter/1]).
+
 -record(state, {filter, timeout}).
 
 %%====================================================================
@@ -44,6 +46,8 @@ init([Filter, Timeout]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
+handle_call(filter, _From, State) ->
+    {reply, {ok, State#state.filter}, State};
 handle_call(_Request, _From, State) ->
     {reply, State}.
 
@@ -88,3 +92,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %% Public API
 %%--------------------------------------------------------------------
+
+filter(Channel) ->
+    gen_server:call(Channel, filter).
