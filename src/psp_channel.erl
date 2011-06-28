@@ -4,19 +4,23 @@
 -behaviour(gen_server).
 
 %% gen_server callbacks
--export([start_link/2, init/1, handle_call/3, handle_cast/2, 
+-export([start_link/3, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
--export([filter/1, suscribe/2]).
+-export([filter/1]).
 
--record(state, {filter, timeout, clients}).
+-record(state, {
+    name,
+    filter,
+    timeout,
+    events}).
 
 %%====================================================================
 %% api callbacks
 %%====================================================================
 
-start_link(Filter, Timeout) ->
-    gen_server:start_link(?MODULE, [Filter, Timeout], []).
+start_link(Name, Filter, Timeout) ->
+    gen_server:start_link(?MODULE, [Name, Filter, Timeout], []).
 
 %%====================================================================
 %% gen_server callbacks
@@ -29,13 +33,15 @@ start_link(Filter, Timeout) ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
-init([Filter, Timeout]) ->
-    error_logger:info_msg("Starting channel~n", []),
+init([Name, Filter, Timeout]) ->
+    % [TODO] filter can a list of {key, value} or a fun
+    error_logger:info_msg("Starting channel ~w~n", [Name]),
     ok = gen_server:cast(psp_pubsub, {new_channel, self(), Filter}),
     {ok, #state{
+        name = Name,
         filter = Filter,
         timeout = Timeout,
-        clients = []
+        events = []
     }}.
 
 %%--------------------------------------------------------------------
@@ -59,8 +65,9 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({event, Event}, State) ->
-    io:format("Chan ~w got event ~p~n", [self(), Event]),
+    error_logger:info_msg("Chan ~w got event ~p~n", [self(), Event]),
     %[TODO] Filtering event and propagate it to clients.
+    gen_event:notify(State#state.name, {event, Event}),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -97,6 +104,3 @@ code_change(_OldVsn, State, _Extra) ->
 
 filter(Channel) ->
     gen_server:call(Channel, filter).
-
-suscribe(_Channel, _Client) ->
-    ok.

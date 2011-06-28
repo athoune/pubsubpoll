@@ -54,13 +54,15 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({publish, Event}, State) ->
+    error_logger:info_msg("pubsub try to publish ~w~n", [Event]),
     ok = broadcast_event(Event, State#state.channels),
     {noreply, State};
 handle_cast({new_channel, Pid, _Filter}, State) ->
     {noreply, State#state{
         channels = State#state.channels ++ [Pid]
     }};
-handle_cast(_Msg, State) ->
+handle_cast(Msg, State) ->
+    error_logger:error_msg("Pubsub cast error : ~w~n", [Msg]),
     {noreply, State}.
 
 %%--------------------------------------------------------------------

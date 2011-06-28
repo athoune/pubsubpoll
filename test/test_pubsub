@@ -7,5 +7,8 @@ main(_) ->
     {ok, _ChanA} = pubsubpoll:create_channel(chan_a, {name, "Robert"}),
     {ok, _ChanB} = pubsubpoll:create_channel(chan_b, {}),
     io:format("Chan: ~p~n", [pubsubpoll:channels()]),
-    ok = pubsubpoll:publish([{name, "Robert"}]),
-    io:format("Filter ~w~n", [psp_channel:filter(chan_a)]).
+    {ok, ClientPid} = pubsubpoll:create_client(),
+    io:format("Client: ~p~n", [ClientPid]),
+    pubsubpoll:suscribe(ClientPid, chan_a),
+    ok = pubsubpoll:publish([{name, "Robert"}, {flavor, "Strawberry"}]).
+    %io:format("Filter ~w~n", [psp_channel:filter(chan_a)]).

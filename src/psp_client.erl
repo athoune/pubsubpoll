@@ -1,7 +1,7 @@
 -module(psp_client).
 -author('mathieu@garambrogne.net').
 
--behaviour(gen_server).
+-behaviour(gen_event).
 
 %% gen_server callbacks
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, 

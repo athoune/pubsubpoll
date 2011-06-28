@@ -30,6 +30,6 @@ init([]) ->
     ]} }.
 
 start_child(Name, Filter, Timeout) ->
-    {ok, Pid} = supervisor:start_child(?MODULE, [Filter, Timeout]),
+    {ok, Pid} = supervisor:start_child(?MODULE, [Name, Filter, Timeout]),
     register(Name, Pid),
     {ok, Name}.
