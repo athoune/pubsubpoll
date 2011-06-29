@@ -13,6 +13,7 @@ handle_info/2, terminate/2, code_change/3]).
     name,
     filter,
     timeout,
+    clients,
     events}).
 
 %%====================================================================
@@ -41,6 +42,7 @@ init([Name, Filter, Timeout]) ->
         name = Name,
         filter = Filter,
         timeout = Timeout,
+        clients = [],
         events = []
     }}.
 
@@ -67,8 +69,12 @@ handle_call(_Request, _From, State) ->
 handle_cast({event, Event}, State) ->
     error_logger:info_msg("Chan ~w got event ~p~n", [self(), Event]),
     %[TODO] Filtering event and propagate it to clients.
-    gen_event:notify(State#state.name, {event, Event}),
+    broadcast(Event, State#state.clients),
     {noreply, State};
+handle_cast({suscribe, ClientPid}, State) ->
+    {noreply, State#state{
+        clients = [ClientPid | State#state.clients]
+    }};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -104,3 +110,13 @@ code_change(_OldVsn, State, _Extra) ->
 
 filter(Channel) ->
     gen_server:call(Channel, filter).
+
+%%--------------------------------------------------------------------
+%% Private API
+%%--------------------------------------------------------------------
+
+broadcast(_Event, []) ->
+    ok;
+broadcast(Event, [Client | Tail]) ->
+    gen_server:cast(Client, {event, Event}),
+    broadcast(Event, Tail).

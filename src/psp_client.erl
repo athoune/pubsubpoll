@@ -1,7 +1,7 @@
 -module(psp_client).
 -author('mathieu@garambrogne.net').
 
--behaviour(gen_event).
+-behaviour(gen_server).
 
 %% gen_server callbacks
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, 
@@ -49,6 +49,9 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast({event, Event}, State) ->
+    io:format("Client ~w got event : ~w~n", [self(), Event]),
+    {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 

@@ -27,9 +27,7 @@ create_client() ->
     psp_client_sup:start_child().
 
 suscribe(Client, Channel) ->
-    gen_event:add_handler(Channel, psp_client_handler, [Client]),
-    ok.
+    gen_server:cast(Channel, {suscribe, Client}).
 
-unsuscribe(Client, Channel) ->
-    gen_event:delete_handler(Channel, psp_client_handler, [Client]),
+unsuscribe(_Client, _Channel) ->
     ok.
