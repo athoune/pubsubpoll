@@ -55,7 +55,8 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 handle_cast({publish, Event}, State) ->
     error_logger:info_msg("pubsub try to publish ~w~n", [Event]),
-    ok = broadcast_event(Event, State#state.channels),
+    {_, M, S} = now(),
+    ok = broadcast_event([{'_id', M * 1000 + S} | Event], State#state.channels),
     {noreply, State};
 handle_cast({new_channel, Pid, _Filter}, State) ->
     {noreply, State#state{

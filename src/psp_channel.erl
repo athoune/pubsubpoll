@@ -14,7 +14,8 @@ handle_info/2, terminate/2, code_change/3]).
     filter,
     timeout,
     clients,
-    events}).
+    events
+    }).
 
 %%====================================================================
 %% api callbacks
@@ -37,6 +38,7 @@ start_link(Name, Filter, Timeout) ->
 init([Name, Filter, Timeout]) ->
     % [TODO] filter can a list of {key, value} or a fun
     error_logger:info_msg("Starting channel ~w~n", [Name]),
+    ets:new(Name, [set, protected, named_table]),
     ok = gen_server:cast(psp_pubsub, {new_channel, self(), Filter}),
     {ok, #state{
         name = Name,
@@ -69,8 +71,12 @@ handle_call(_Request, _From, State) ->
 handle_cast({event, Event}, State) ->
     error_logger:info_msg("Chan ~w got event ~p~n", [self(), Event]),
     %[TODO] Filtering event and propagate it to clients.
-    broadcast(Event, State#state.clients),
-    {noreply, State};
+    Id = proplists:get_value('_id', Event),
+    true = ets:insert(State#state.name, {Id, Event}),
+    broadcast(State#state.name, Id, State#state.clients),
+    {noreply, State#state{
+        events = [Id | State#state.events]
+    }};
 handle_cast({suscribe, ClientPid}, State) ->
     {noreply, State#state{
         clients = [ClientPid | State#state.clients]
@@ -115,8 +121,8 @@ filter(Channel) ->
 %% Private API
 %%--------------------------------------------------------------------
 
-broadcast(_Event, []) ->
+broadcast(_Name, _EventId, []) ->
     ok;
-broadcast(Event, [Client | Tail]) ->
-    gen_server:cast(Client, {event, Event}),
-    broadcast(Event, Tail).
+broadcast(Name, EventId, [Client | Tail]) ->
+    gen_server:cast(Client, {event, Name, EventId}),
+    broadcast(Name, EventId, Tail).

@@ -49,8 +49,9 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-handle_cast({event, Event}, State) ->
-    io:format("Client ~w got event : ~w~n", [self(), Event]),
+handle_cast({event, Name, EventId}, State) ->
+    [{_EventId, Event}] = ets:lookup(Name, EventId),
+    io:format("Client ~w got event : ~w from ~w~n", [self(), Event, Name]),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
