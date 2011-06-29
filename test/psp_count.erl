@@ -1,28 +1,22 @@
--module(psp_channel).
+-module(psp_count).
 -author('mathieu@garambrogne.net').
 
 -behaviour(gen_server).
 
 %% gen_server callbacks
--export([start_link/3, init/1, handle_call/3, handle_cast/2, 
+-export([start_link/0, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
--export([filter/1]).
+-export([value/0]).
 
--record(state, {
-    name,
-    filter,
-    timeout,
-    clients,
-    events
-    }).
+-record(state, {count}).
 
 %%====================================================================
 %% api callbacks
 %%====================================================================
 
-start_link(Name, Filter, Timeout) ->
-    gen_server:start_link(?MODULE, [Name, Filter, Timeout], []).
+start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %%====================================================================
 %% gen_server callbacks
@@ -35,17 +29,9 @@ start_link(Name, Filter, Timeout) ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
-init([Name, Filter, Timeout]) ->
-    % [TODO] filter can a list of {key, value} or a fun
-    error_logger:info_msg("Starting channel ~w~n", [Name]),
-    ets:new(Name, [set, protected, named_table]),
-    ok = gen_server:cast(psp_pubsub, {new_channel, self(), Filter}),
+init([]) ->
     {ok, #state{
-        name = Name,
-        filter = Filter,
-        timeout = Timeout,
-        clients = [],
-        events = []
+        count = 0
     }}.
 
 %%--------------------------------------------------------------------
@@ -57,8 +43,8 @@ init([Name, Filter, Timeout]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call(filter, _From, State) ->
-    {reply, {ok, State#state.filter}, State};
+handle_call(value, _From, State) ->
+    {reply, State#state.count, State};
 handle_call(_Request, _From, State) ->
     {reply, State}.
 
@@ -68,18 +54,9 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-handle_cast({event, Event}, State) ->
-    %error_logger:info_msg("Chan ~w got event ~p~n", [self(), Event]),
-    %[TODO] Filtering event and propagate it to clients.
-    Id = proplists:get_value('_id', Event),
-    true = ets:insert(State#state.name, {Id, Event}),
-    broadcast(State#state.name, Id, State#state.clients),
+handle_cast(incr, State) ->
     {noreply, State#state{
-        events = [Id | State#state.events]
-    }};
-handle_cast({suscribe, ClientPid}, State) ->
-    {noreply, State#state{
-        clients = [ClientPid | State#state.clients]
+        count = State#state.count + 1
     }};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -114,15 +91,5 @@ code_change(_OldVsn, State, _Extra) ->
 %% Public API
 %%--------------------------------------------------------------------
 
-filter(Channel) ->
-    gen_server:call(Channel, filter).
-
-%%--------------------------------------------------------------------
-%% Private API
-%%--------------------------------------------------------------------
-
-broadcast(_Name, _EventId, []) ->
-    ok;
-broadcast(Name, EventId, [Client | Tail]) ->
-    gen_server:cast(Client, {event, Name, EventId}),
-    broadcast(Name, EventId, Tail).
+value() ->
+    gen_server:call(?MODULE, value).

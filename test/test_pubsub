@@ -10,5 +10,10 @@ main(_) ->
     {ok, ClientPid} = pubsubpoll:create_client(),
     io:format("Client: ~p~n", [ClientPid]),
     pubsubpoll:suscribe(ClientPid, chan_a),
-    ok = pubsubpoll:publish([{name, "Robert"}, {flavor, "Strawberry"}]).
-    %io:format("Filter ~w~n", [psp_channel:filter(chan_a)]).
+    flood(10000).
+
+flood(0) ->
+    ok;
+flood(Cpt) ->
+    ok = pubsubpoll:publish([{name, "Robert"}, {flavor, "Strawberry"}]),
+    flood(Cpt -1).

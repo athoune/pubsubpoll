@@ -7,7 +7,13 @@
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
--record(state, {}).
+-record(state, {
+    count
+}).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
 
 %%====================================================================
 %% api callbacks
@@ -29,6 +35,7 @@ start_link() ->
 %%--------------------------------------------------------------------
 init([]) ->
     {ok, #state{
+        count = true
     }}.
 
 %%--------------------------------------------------------------------
@@ -50,8 +57,13 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({event, Name, EventId}, State) ->
-    [{_EventId, Event}] = ets:lookup(Name, EventId),
-    io:format("Client ~w got event : ~w from ~w~n", [self(), Event, Name]),
+    [{_EventId, _Event}] = ets:lookup(Name, EventId),
+    case State#state.count of
+        true ->
+            gen_server:cast(psp_count, incr);
+        _ -> nop
+    end,
+    %io:format("Client ~w got event : ~w from ~w~n", [self(), Event, Name]),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
