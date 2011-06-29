@@ -4,7 +4,7 @@
 
 flood_test() ->
     ok = application:start(pubsubpoll),
-    psp_count:start_link(),
+    psp_count:start_link(200000),
     {ok, _ChanA} = pubsubpoll:create_channel(chan_a, {name, "Robert"}),
     {ok, _ChanB} = pubsubpoll:create_channel(chan_b, {}),
     io:format("Chan: ~p~n", [pubsubpoll:channels()]),

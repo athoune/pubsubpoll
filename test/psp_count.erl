@@ -4,19 +4,19 @@
 -behaviour(gen_server).
 
 %% gen_server callbacks
--export([start_link/0, init/1, handle_call/3, handle_cast/2, 
+-export([start_link/1, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
 -export([value/0]).
 
--record(state, {count}).
+-record(state, {max, count, timer}).
 
 %%====================================================================
 %% api callbacks
 %%====================================================================
 
-start_link() ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+start_link(Size) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [Size], []).
 
 %%====================================================================
 %% gen_server callbacks
@@ -29,9 +29,11 @@ start_link() ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
-init([]) ->
+init([Size]) ->
     {ok, #state{
-        count = 0
+        max = Size,
+        count = Size,
+        timer = now()
     }}.
 
 %%--------------------------------------------------------------------
@@ -55,8 +57,14 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast(incr, State) ->
+    case State#state.count of
+        1 ->
+            Score = timer:now_diff(now(), State#state.timer),
+            error_logger:info_msg("~w in ~w µs~n ~w µs~n", [State#state.max, Score, Score / State#state.max]);
+        _ -> nop
+    end,
     {noreply, State#state{
-        count = State#state.count + 1
+        count = State#state.count - 1
     }};
 handle_cast(_Msg, State) ->
     {noreply, State}.
