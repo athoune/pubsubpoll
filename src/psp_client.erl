@@ -57,14 +57,17 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({event, Name, EventId}, State) ->
-    [{_EventId, _Event}] = ets:lookup(Name, EventId),
-    case State#state.count of
-        true ->
-            gen_server:cast(psp_count, incr);
-        _ -> nop
-    end,
-    %io:format("Client ~w got event : ~w from ~w~n", [self(), Event, Name]),
-    {noreply, State};
+    case ets:lookup(Name, EventId) of
+        [] -> {noreply, State};
+        [{_EventId, _Event}] ->
+            case State#state.count of
+                true ->
+                    gen_server:cast(psp_count, incr);
+                _ -> nop
+            end,
+            %io:format("Client ~w got event : ~w from ~w~n", [self(), Event, Name]),
+            {noreply, State}
+    end;
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
