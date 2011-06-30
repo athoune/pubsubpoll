@@ -74,8 +74,12 @@ handle_cast({event, Event}, State) ->
     Id = proplists:get_value('_id', Event),
     true = ets:insert(State#state.name, {Id, Event}),
     broadcast(State#state.name, Id, State#state.clients),
+    {_, M, S} = now(),
+    Now = M * 1000 + S,
+    {CleanEvents, Trash} = garbage(State#state.events, Now - State#state.timeout),
+    ok = clean(State#state.name, Trash),
     {noreply, State#state{
-        events = [Id | State#state.events]
+        events = [Id | CleanEvents]
     }};
 handle_cast({suscribe, ClientPid}, State) ->
     {noreply, State#state{
@@ -126,3 +130,34 @@ broadcast(_Name, _EventId, []) ->
 broadcast(Name, EventId, [Client | Tail]) ->
     gen_server:cast(Client, {event, Name, EventId}),
     broadcast(Name, EventId, Tail).
+
+garbage([], _Since, Trash) ->
+    {[], Trash};
+garbage([Event|Events] = All, Since, Trash) ->
+    if
+        Event < Since ->
+            garbage(Events, Since, [Event | Trash]);
+        true ->
+            {lists:reverse(All), Trash}
+    end.
+garbage([], _) ->
+    {[], []};
+garbage(Events, Since) ->
+    garbage(lists:reverse(Events), Since, []).
+
+clean(_Tab, []) ->
+    ok;
+clean(Tab, [Id|Tail])->
+    true = ets:delete(Tab, Id),
+    clean(Tab, Tail).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+garbage_test() ->
+    A = [62,57,51,50,45],
+    {AA, Trash} = garbage(A, 51),
+    ?assertEqual([50, 45], Trash),
+    ?assertEqual([62,57,51], AA).
+
+-endif.
