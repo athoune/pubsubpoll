@@ -14,7 +14,8 @@ handle_info/2, terminate/2, code_change/3]).
     filter,
     timeout,
     clients,
-    events
+    events,
+    garbage
     }).
 
 %%====================================================================
@@ -45,7 +46,8 @@ init([Name, Filter, Timeout]) ->
         filter = Filter,
         timeout = Timeout,
         clients = [],
-        events = []
+        events = [],
+        garbage = 0
     }}.
 
 %%--------------------------------------------------------------------
@@ -74,12 +76,20 @@ handle_cast({event, Event}, State) ->
     Id = proplists:get_value('_id', Event),
     true = ets:insert(State#state.name, {Id, Event}),
     broadcast(State#state.name, Id, State#state.clients),
-    {_, M, S} = now(),
-    Now = M * 1000 + S,
-    {CleanEvents, Trash} = garbage(State#state.events, Now - State#state.timeout),
-    ok = clean(State#state.name, Trash),
+    {NewEvents, Garbage} = case State#state.garbage of
+        50 ->
+            {_, M, S} = now(),
+            Now = M * 1000 + S,
+            {CleanEvents, Trash} = garbage(State#state.events, Now - State#state.timeout),
+            error_logger:info_msg("Trash ~w~n", [Trash]),
+            ok = clean(State#state.name, Trash),
+            {CleanEvents, 0};
+        _ ->
+            {State#state.events, State#state.garbage + 1}
+        end,
     {noreply, State#state{
-        events = [Id | CleanEvents]
+        events = [Id | NewEvents],
+        garbage = Garbage
     }};
 handle_cast({suscribe, ClientPid}, State) ->
     {noreply, State#state{
