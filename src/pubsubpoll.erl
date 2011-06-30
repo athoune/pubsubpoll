@@ -12,7 +12,7 @@
 ]).
 
 create_channel(Name, Filter) ->
-    create_channel(Name, Filter, 90000).
+    create_channel(Name, Filter, 120000).
 
 create_channel(Name, Filter, TimeOut) ->
     psp_channel_sup:start_child(Name, Filter, TimeOut).
