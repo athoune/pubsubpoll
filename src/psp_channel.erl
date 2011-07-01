@@ -81,7 +81,7 @@ handle_cast({event, Event}, State) ->
             {_, M, S} = now(),
             Now = M * 1000 + S,
             {CleanEvents, Trash} = garbage(State#state.events, Now - State#state.timeout),
-            error_logger:info_msg("Trash ~w~n", [Trash]),
+            %error_logger:info_msg("Trash ~w~n", [Trash]),
             ok = clean(State#state.name, Trash),
             {CleanEvents, 0};
         _ ->

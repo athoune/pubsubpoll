@@ -3,15 +3,21 @@
 -include_lib("eunit/include/eunit.hrl").
 
 flood_test() ->
-    ok = application:start(pubsubpoll),
-    psp_count:start_link(200000),
-    {ok, _ChanA} = pubsubpoll:create_channel(chan_a, {name, "Robert"}),
-    {ok, _ChanB} = pubsubpoll:create_channel(chan_b, {}),
-    io:format("Chan: ~p~n", [pubsubpoll:channels()]),
-    clients(200),
-    flood(1000),
-    timer:sleep(4000),
-    ?debugFmt("Count ~w~n", [psp_count:value()]).
+    %{tiemout, 100,
+    %fun() ->
+        ok = application:start(pubsubpoll),
+        psp_count:start_link(300000),
+        {ok, _ChanA} = pubsubpoll:create_channel(chan_a, {name, "Robert"}),
+        {ok, _ChanB} = pubsubpoll:create_channel(chan_b, {}),
+        io:format("Chan: ~p~n", [pubsubpoll:channels()]),
+        clients(300),
+        flood(1000),
+        timer:sleep(10000),
+        Count = psp_count:value(),
+        ?assertEqual(Count, 0),
+        ?debugFmt("Count ~w~n", [Count]),
+        ok.
+    %end}.
 
 flood(0) ->
     ok;
