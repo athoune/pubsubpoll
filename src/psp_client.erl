@@ -62,7 +62,7 @@ handle_cast({event, Name, EventId}, State) ->
         [{_EventId, _Event}] ->
             case State#state.count of
                 true ->
-                    gen_server:cast(psp_count, incr);
+                    psp_count:incr();
                 _ -> nop
             end,
             %io:format("Client ~w got event : ~w from ~w~n", [self(), Event, Name]),

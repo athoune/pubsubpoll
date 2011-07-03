@@ -4,19 +4,22 @@
 -behaviour(gen_server).
 
 %% gen_server callbacks
--export([start_link/1, init/1, handle_call/3, handle_cast/2, 
+-export([start_link/1, start_link/2, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
--export([value/0]).
+-export([value/0, incr/0]).
 
--record(state, {max, count, timer}).
+-record(state, {max, count, timer, action}).
 
 %%====================================================================
 %% api callbacks
 %%====================================================================
 
 start_link(Size) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Size], []).
+    start_link(Size, nil).
+
+start_link(Size, OnFinished) ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [Size, OnFinished], []).
 
 %%====================================================================
 %% gen_server callbacks
@@ -29,11 +32,12 @@ start_link(Size) ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
-init([Size]) ->
+init([Size, OnFinished]) ->
     {ok, #state{
-        max = Size,
-        count = Size,
-        timer = now()
+        max    = Size,
+        count  = Size,
+        timer  = now(),
+        action = OnFinished
     }}.
 
 %%--------------------------------------------------------------------
@@ -60,7 +64,11 @@ handle_cast(incr, State) ->
     case State#state.count of
         1 ->
             Score = timer:now_diff(now(), State#state.timer),
-            error_logger:info_msg("~w in ~w µs~n ~w µs~n", [State#state.max, Score, Score / State#state.max]);
+            error_logger:info_msg("~w in ~w µs~n ~w µs~n", [State#state.max, Score, Score / State#state.max]),
+            case State#state.action of
+                nil -> nop;
+                Action -> apply(Action, [State])
+            end;
         _ -> nop
     end,
     {noreply, State#state{
@@ -101,3 +109,16 @@ code_change(_OldVsn, State, _Extra) ->
 
 value() ->
     gen_server:call(?MODULE, value).
+
+incr() ->
+    gen_server:cast(?MODULE, incr).
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+count_test() ->
+    psp_count:start_link(1, fun(_State) -> 
+        ?assertEqual(ok, ok)
+    end),
+    psp_count:incr().
+
+-endif.
