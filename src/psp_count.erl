@@ -69,7 +69,14 @@ handle_cast(incr, State) ->
                 nil -> nop;
                 Action -> apply(Action, [State])
             end;
-        _ -> nop
+        _ ->
+            nop
+    end,
+    case (State#state.count rem 10000) of
+        0 ->
+            error_logger:info_msg("counting : ~w 10k~n", [State#state.count / 10000]);
+        _ ->
+            nop
     end,
     {noreply, State#state{
         count = State#state.count - 1
