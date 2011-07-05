@@ -4,20 +4,22 @@
 
 main(_) ->
     ok = application:start(pubsubpoll),
-    Client = 10000,
-    Message = 1000,
+    Client = 10000, % Number of clients
+    Message = 1000, % Number of messages
     psp_count:start_link(Client * Message),
     {ok, _ChanA} = pubsubpoll:create_channel(chan_a, {name, "Robert"}),
     clients(Client),
     flood(Message),
-    timer:sleep(100000).
+    timer:sleep(100000). % Arbitrary wait
 
+%% Publish lots of dummy messages
 flood(0) ->
     ok;
 flood(Cpt) ->
     ok = pubsubpoll:publish([{name, "Robert"}, {flavor, "Strawberry"}]),
     flood(Cpt -1).
 
+%% Create lots of clients
 clients(Cpt) ->
     clients(Cpt, []).
 clients(0, Clients) ->
@@ -30,6 +32,7 @@ clients(Cpt, Clients) ->
     end),
     clients(Cpt-1, [ClientPid | Clients]).
 
+%% poll, wait 10 seconds and poll again and again
 infinite_poll(ClientPid) ->
     {ok, Events} = psp_client:poll(ClientPid),
     timer:sleep(1000),
