@@ -4,16 +4,33 @@
 
 main(_) ->
     ok = application:start(pubsubpoll),
+    Client = 10000,
+    Message = 1000,
+    psp_count:start_link(Client * Message),
     {ok, _ChanA} = pubsubpoll:create_channel(chan_a, {name, "Robert"}),
-    {ok, _ChanB} = pubsubpoll:create_channel(chan_b, {}),
-    io:format("Chan: ~p~n", [pubsubpoll:channels()]),
-    {ok, ClientPid} = pubsubpoll:create_client(),
-    io:format("Client: ~p~n", [ClientPid]),
-    pubsubpoll:suscribe(ClientPid, chan_a),
-    flood(10000).
+    clients(Client),
+    flood(Message),
+    timer:sleep(100000).
 
 flood(0) ->
     ok;
 flood(Cpt) ->
     ok = pubsubpoll:publish([{name, "Robert"}, {flavor, "Strawberry"}]),
     flood(Cpt -1).
+
+clients(Cpt) ->
+    clients(Cpt, []).
+clients(0, Clients) ->
+    {ok, Clients};
+clients(Cpt, Clients) ->
+    {ok, ClientPid} = pubsubpoll:create_client(),
+    pubsubpoll:suscribe(ClientPid, chan_a),
+    spawn(fun() ->
+        infinite_poll(ClientPid)
+    end),
+    clients(Cpt-1, [ClientPid | Clients]).
+
+infinite_poll(ClientPid) ->
+    {ok, Events} = psp_client:poll(ClientPid),
+    timer:sleep(1000),
+    infinite_poll(ClientPid).
