@@ -7,8 +7,11 @@
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
+-export([poll/1]).
+
 -record(state, {
-    count
+    count,
+    queue
 }).
 
 -ifdef(TEST).
@@ -35,7 +38,8 @@ start_link() ->
 %%--------------------------------------------------------------------
 init([]) ->
     {ok, #state{
-        count = true
+        count = true,
+        queue = []
     }}.
 
 %%--------------------------------------------------------------------
@@ -47,6 +51,10 @@ init([]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
+handle_call(poll, _From, State) ->
+    {reply, fetch_data(State#state.queue, State#state.count), State#state{
+        queue = []
+    }};
 handle_call(_Request, _From, State) ->
     {reply, State}.
 
@@ -57,17 +65,14 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({event, Name, EventId}, State) ->
-    case ets:lookup(Name, EventId) of
-        [] -> {noreply, State};
-        [{_EventId, _Event}] ->
-            case State#state.count of
-                true ->
-                    psp_count:incr();
-                _ -> nop
-            end,
-            %io:format("Client ~w got event : ~w from ~w~n", [self(), Event, Name]),
-            {noreply, State}
-    end;
+    % case ets:lookup(Name, EventId) of
+    %     [] -> {noreply, State};
+    %     [{_EventId, _Event}] ->
+    %         {noreply, State}
+    % end,
+    {noreply, State#state{
+        queue = [{Name, EventId} | State#state.queue]
+    }};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -100,3 +105,43 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %% Public API
 %%--------------------------------------------------------------------
+
+poll(ClientPid) ->
+    gen_server:call(ClientPid, poll).
+
+%%--------------------------------------------------------------------
+%% Private API
+%%--------------------------------------------------------------------
+
+fetch_data([], Acc, _Count) ->
+    {ok, Acc};
+fetch_data([{Name, EventId}|Tail], Acc, Count) ->
+    Events = case ets:lookup(Name, EventId) of
+        [] ->
+            Acc;
+        [{_EventId, Event}] ->
+            [Event|Acc]
+        end,
+        case Count of
+            true ->
+                psp_count:incr();
+            _ -> nop
+        end,
+    
+    fetch_data(Tail, Events, Count).
+fetch_data(Ids, Count) ->
+    fetch_data(Ids, [], Count).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+    client_test() ->
+        {ok, ClientPid} = psp_client:start_link(),
+        Name = client_test,
+        Id = 42,
+        Event = toto,
+        ets:new(Name, [set, named_table]),
+        true = ets:insert(client_test, {Id, Event}),
+        gen_server:cast(ClientPid, {event, Name, Id}),
+        {ok, Events} = poll(ClientPid),
+        ?assertEqual([Event], Events).
+-endif.
