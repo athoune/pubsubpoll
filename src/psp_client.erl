@@ -52,6 +52,7 @@ init([]) ->
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 handle_call(poll, _From, State) ->
+    psp_count:max(length(State#state.queue)),
     {reply, fetch_data(State#state.queue, State#state.count), State#state{
         queue = []
     }};

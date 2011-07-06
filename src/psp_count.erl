@@ -7,9 +7,9 @@
 -export([start_link/1, start_link/2, init/1, handle_call/3, handle_cast/2, 
 handle_info/2, terminate/2, code_change/3]).
 
--export([value/0, incr/0]).
+-export([value/0, incr/0, max/1, max_value/0]).
 
--record(state, {max, count, timer, action}).
+-record(state, {max, count, timer, action, maxima}).
 
 %%====================================================================
 %% api callbacks
@@ -37,7 +37,8 @@ init([Size, OnFinished]) ->
         max    = Size,
         count  = Size,
         timer  = now(),
-        action = OnFinished
+        action = OnFinished,
+        maxima = 0
     }}.
 
 %%--------------------------------------------------------------------
@@ -51,6 +52,8 @@ init([Size, OnFinished]) ->
 %%--------------------------------------------------------------------
 handle_call(value, _From, State) ->
     {reply, State#state.count, State};
+handle_call(max_value, _From, State) ->
+    {reply, State#state.maxima, State};
 handle_call(_Request, _From, State) ->
     {reply, State}.
 
@@ -64,7 +67,10 @@ handle_cast(incr, State) ->
     case State#state.count of
         1 ->
             Score = timer:now_diff(now(), State#state.timer),
-            error_logger:info_msg("~w in ~w µs~n ~w µs~n", [State#state.max, Score, Score / State#state.max]),
+            error_logger:info_msg("~w in ~w µs~n ~w µs~nMaxima: ~w~n", [
+                State#state.max, Score, Score / State#state.max,
+                State#state.maxima
+            ]),
             case State#state.action of
                 nil -> nop;
                 Action -> apply(Action, [State])
@@ -81,6 +87,12 @@ handle_cast(incr, State) ->
     {noreply, State#state{
         count = State#state.count - 1
     }};
+handle_cast({max, Value}, State) ->
+    M = case Value > State#state.maxima of
+        true -> Value;
+        _ -> State#state.maxima
+    end,
+    {noreply, State#state{ maxima = M}};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -119,6 +131,12 @@ value() ->
 
 incr() ->
     gen_server:cast(?MODULE, incr).
+
+max(Value) ->
+    gen_server:cast(?MODULE, {max, Value}).
+
+max_value() ->
+    gen_server:call(?MODULE, max_value).
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
