@@ -141,7 +141,11 @@ publish(Channel, Event) ->
 broadcast(_Name, _EventId, []) ->
     ok;
 broadcast(Name, EventId, [Client | Tail]) ->
-    gen_server:cast(Client, {event, Name, EventId}),
+    case gen_server:cast(Client, {event, Name, EventId}) of
+        ok -> nop;
+        Error ->
+            error_logger:erro_msg("Error while sending sending event to client ~w : ~w~n", [Client, Error])
+    end,
     broadcast(Name, EventId, Tail).
 
 garbage([], _Since, Trash) ->
