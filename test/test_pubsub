@@ -3,6 +3,10 @@
 %%! -pa ebin
 
 main(_) ->
+    ok = application:start(inets),
+    net_kernel:start([pub@localhost]),
+    auth:set_cookie(node(), pub),
+
     ok = application:start(pubsubpoll),
     random:seed(),
     Client = 10000, % Number of clients
