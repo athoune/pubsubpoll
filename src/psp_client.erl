@@ -51,9 +51,9 @@ init([]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call(poll, _From, State) ->
-    psp_count:max(length(State#state.queue)),
-    {reply, fetch_data(State#state.queue, State#state.count), State#state{
+handle_call(poll, _From, #state{queue = Queue, count = Count} = State) ->
+    psp_count:max(length(Queue)),
+    {reply, fetch_data(Queue, Count), State#state{
         queue = []
     }};
 handle_call(_Request, _From, State) ->
@@ -65,14 +65,15 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-handle_cast({event, Name, EventId}, State) ->
+handle_cast({event, Name, EventId}, #state{queue = Queue} = State) ->
     % case ets:lookup(Name, EventId) of
     %     [] -> {noreply, State};
     %     [{_EventId, _Event}] ->
     %         {noreply, State}
     % end,
+    error_logger:info_msg("Event ~w ~w~n", [EventId, Queue]),
     {noreply, State#state{
-        queue = [{Name, EventId} | State#state.queue]
+        queue = [{Name, EventId} | Queue]
     }};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -122,14 +123,15 @@ fetch_data([{Name, EventId}|Tail], Acc, Count) ->
             Acc;
         [{_EventId, Event}] ->
             [Event|Acc]
-        end,
-        case Count of
-            true ->
-                psp_count:incr();
-            _ -> nop
-        end,
-    
+    end,
+    case Count of
+        true ->
+            psp_count:incr();
+        _ -> nop
+    end,
     fetch_data(Tail, Events, Count).
+
+-spec fetch_data(pid(), boolean()) -> {ok, [any()]}.
 fetch_data(Ids, Count) ->
     fetch_data(Ids, [], Count).
 
@@ -140,7 +142,7 @@ fetch_data(Ids, Count) ->
         Name = client_test,
         Id = 42,
         Event = toto,
-        ets:new(Name, [set, named_table]),
+        Name = ets:new(Name, [set, named_table]),
         true = ets:insert(client_test, {Id, Event}),
         gen_server:cast(ClientPid, {event, Name, Id}),
         {ok, Events} = poll(ClientPid),
