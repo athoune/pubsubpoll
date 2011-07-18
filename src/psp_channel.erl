@@ -39,7 +39,7 @@ start_link(Name, Filter, Timeout) ->
 init([Name, Filter, Timeout]) ->
     % [TODO] filter can a list of {key, value} or a fun
     error_logger:info_msg("Starting channel ~w~n", [Name]),
-    ets:new(Name, [set, protected, named_table]),
+    Name = ets:new(Name, [set, protected, named_table]),
     ok = gen_server:cast(psp_pubsub, {new_channel, self(), Filter}),
     {ok, #state{
         name = Name,
