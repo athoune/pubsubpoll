@@ -2,9 +2,10 @@
 
 -author('mathieu@garambrogne.net').
 
--behaviour(gen_server).
+-behaviour(gen_server2).
 
--export([poll/1]).
+-export([poll/1,
+    auto_poll/2]).
 
 %% gen_server callbacks
 -export([start_link/2, init/1, handle_call/3, handle_cast/2, 
@@ -16,6 +17,18 @@ handle_info/2, terminate/2, code_change/3]).
     client,
     onPoll
 }).
+
+%%--------------------------------------------------------------------
+%% Public API
+%%--------------------------------------------------------------------
+
+poll(UserPid) ->
+    gen_server:cast(UserPid, poll).
+
+auto_poll(UserPid, Interval) ->
+    poll(UserPid),
+    timer:apply_after(random:uniform(Interval), ?MODULE, auto_poll, [UserPid, Interval]).
+
 
 
 %%====================================================================
@@ -63,12 +76,11 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 handle_cast(poll, #state{client = Client, onPoll = OnPoll} = State) ->
     {ok, Events} = psp_client:poll(Client),
-    error_logger:info_msg("user Events ~w~n", [Events]),
+    %error_logger:info_msg("user Events ~w~n", [Events]),
     OnPoll(Events),
     %error_logger:info_msg("Events ~w~n", [Events]),
     %metrics_countdown:decr(plop, length(Events)),
     %error_logger:info_msg("poll ~w from ~w~n", [Client, self()]),
-    erlang:send_after(?INTERVAL, self(), poll),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -96,13 +108,6 @@ terminate(_Reason, State) ->
 %%--------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
-%%--------------------------------------------------------------------
-%% Public API
-%%--------------------------------------------------------------------
-
-poll(UserPid) ->
-    gen_server:cast(UserPid, poll).
 
 %%--------------------------------------------------------------------
 %% Private API
